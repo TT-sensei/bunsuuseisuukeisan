@@ -660,6 +660,8 @@ function submitAnswer(){
       document.getElementById('yak-show-n').textContent=q.ansN;
       document.getElementById('yak-show-d').textContent=q.ansD;
       document.getElementById('yakubun-card').style.display='';
+      /* 約分ボーナスは挑戦してもしなくても次へ進める */
+      document.getElementById('next-btn').classList.remove('hidden');
     } else {
       document.getElementById('next-btn').classList.remove('hidden');
     }
