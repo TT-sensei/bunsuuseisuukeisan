@@ -224,7 +224,7 @@ h1{font-size:1.25rem;font-weight:700;color:#2c3e50;margin-bottom:.9rem;text-alig
       <div class="rank-msg" id="res-rank"></div>
       <div class="result-detail" id="res-detail"></div>
       <div class="new-record" id="res-newrec" style="display:none">🏆 新記録！すごい！</div>
-      <button class="start-btn" onclick="startQuiz()">🔄 もう一度！</button>
+      <button class="start-btn" onclick="backToQuizStart()">🔄 もう一度（最初にもどる）</button>
     </div>
 
     <!-- プレイ中 -->
@@ -541,6 +541,16 @@ function getRank(s){
   return{emoji:'💪',msg:'これからどんどん上達するよ！'};
 }
 
+
+function backToQuizStart(){
+  clearInterval(timerID);
+  document.getElementById('quiz-playing').style.display='none';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('quiz-start').style.display='';
+  document.getElementById('feedback').innerHTML='';
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('yakubun-card').style.display='none';
+}
 function startQuiz(){
   score=0;correctCount=0;wrongCount=0;timerSec=60;streak=0;
   hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
