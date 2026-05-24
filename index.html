@@ -526,6 +526,7 @@ const LS_KEY='frac_hiscore_v2';
 let hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
 let score=0,correctCount=0,wrongCount=0;
 let timerSec=30,timerID=null;
+let timerPaused=false;
 let returnStartID=null;
 let currentQ=null;
 let streak=0; /* 連続正解 */
@@ -576,7 +577,7 @@ function backToQuizStart(){
 }
 function startQuiz(){
   clearTimeout(returnStartID);
-  score=0;correctCount=0;wrongCount=0;timerSec=60;streak=0;
+  score=0;correctCount=0;wrongCount=0;timerSec=60;streak=0;timerPaused=false;
   hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
   document.getElementById('quiz-start').style.display='none';
   document.getElementById('result-screen').style.display='none';
@@ -586,6 +587,7 @@ function startQuiz(){
   soundStart();
   clearInterval(timerID);
   timerID=setInterval(()=>{
+    if(timerPaused) return;
     timerSec--;
     const el=document.getElementById('q-timer');
     el.textContent='⏱ '+timerSec;
@@ -625,6 +627,8 @@ function endQuiz(){
 
 function nextQuestion(){
   if(timerSec<=0) return; // タイムアップ後は新問題を出さない
+  timerPaused=false;
+  document.getElementById('q-timer').textContent='⏱ '+timerSec;
   currentQ=genQuestion();
   renderQuestion(currentQ);
   document.getElementById('feedback').innerHTML='';
@@ -656,11 +660,26 @@ function submitAnswer(){
   const an=parseInt(document.getElementById('ans-n').value);
   const ad=parseInt(document.getElementById('ans-d').value);
   const q=currentQ;
-  /* 約分前・約分後どちらも正解 */
-  const ok=(an===q.ansN&&ad===q.ansD)||(an===q.yakN&&ad===q.yakD);
+  /* 最簡分数のみ正解（約分できる場合は約分を必須にする） */
+  const isRaw=(an===q.ansN&&ad===q.ansD);
+  const isReduced=(an===q.yakN&&ad===q.yakD);
   document.getElementById('submit-btn').disabled=true;
 
-  if(ok){
+  if(q.canYak && isRaw && !isReduced){
+    document.getElementById('ans-n').className='ans-input wrong';
+    document.getElementById('ans-d').className='ans-input wrong';
+    document.getElementById('feedback').innerHTML=`<span class="fb-wrong">⚠️ まだ約分できるよ！ ${q.ansN}/${q.ansD} をいちばんかんたんな形にしよう。</span>`;
+    document.getElementById('yak-show-n').textContent=q.ansN;
+    document.getElementById('yak-show-d').textContent=q.ansD;
+    document.getElementById('yakubun-card').style.display='';
+    document.getElementById('yak-fb').textContent='';
+    timerPaused=true;
+    document.getElementById('q-timer').textContent='⏸ 約分中';
+    document.getElementById('yak-n').focus();
+    return;
+  }
+
+  if(isReduced){
     score+=10; correctCount++; streak++;
     document.getElementById('ans-n').className='ans-input correct';
     document.getElementById('ans-d').className='ans-input correct';
@@ -731,6 +750,17 @@ function submitYakubun(){
   const yd=parseInt(document.getElementById('yak-d').value);
   const fb=document.getElementById('yak-fb');
   if(yn===q.yakN&&yd===q.yakD){
+    if(timerPaused){
+      score+=10; correctCount++; streak++;
+      document.getElementById('ans-n').className='ans-input correct';
+      document.getElementById('ans-d').className='ans-input correct';
+      const streakBonus=streak>=3?` 🔥${streak}連続！`:'';
+      document.getElementById('feedback').innerHTML=`<span class="fb-correct">⭕ 約分までできてせいかい！ +10点${streakBonus}</span>`;
+      if(streak>=3) launchConfetti(30);
+      soundCorrect();
+      timerPaused=false;
+      document.getElementById('q-timer').textContent='⏱ '+timerSec;
+    }
     score+=5;
     document.getElementById('yak-n').className='yak-input correct';
     document.getElementById('yak-d').className='yak-input correct';
@@ -738,6 +768,7 @@ function submitYakubun(){
     document.getElementById('yak-btn').disabled=true;
     soundYakubun(); launchConfetti(40);
     updateScoreUI();
+    updateStreakBar();
   } else {
     document.getElementById('yak-n').className='yak-input wrong';
     document.getElementById('yak-d').className='yak-input wrong';
