@@ -137,6 +137,12 @@ h1{font-size:1.25rem;font-weight:700;color:#2c3e50;margin-bottom:.9rem;text-alig
 .yak-fb{font-size:.93rem;font-weight:700;margin-top:6px;}
 .yak-fb.ok{color:#2e7d32;}.yak-fb.ng{color:#c62828;}
 
+/* ---- タッチ用テンキー ---- */
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto .7rem;}
+.np-btn{padding:12px 0;font-size:1.2rem;font-weight:700;border:2px solid #d0d7de;border-radius:10px;background:#fff;cursor:pointer;}
+.np-btn:active{transform:scale(.97);}
+.np-btn.op{background:#f3f6fb;color:#37474f;}
+
 /* ---- 次へボタン ---- */
 .next-btn{display:block;width:100%;padding:14px;font-size:1.1rem;font-weight:700;border:none;border-radius:14px;background:linear-gradient(135deg,#7b1fa2,#6a1b9a);color:#fff;cursor:pointer;font-family:inherit;margin-top:.5rem;transition:transform .1s;box-shadow:0 3px 10px rgba(123,31,162,.3);}
 .next-btn:active{transform:scale(.98);}
@@ -274,6 +280,21 @@ h1{font-size:1.25rem;font-weight:700;color:#2c3e50;margin-bottom:.9rem;text-alig
           <button class="yak-btn" id="yak-btn" onclick="submitYakubun()">かくにん</button>
         </div>
         <div class="yak-fb" id="yak-fb"></div>
+      </div>
+
+      <div class="numpad" id="touch-numpad">
+        <button type="button" class="np-btn" onclick="tapNum('1')">1</button>
+        <button type="button" class="np-btn" onclick="tapNum('2')">2</button>
+        <button type="button" class="np-btn" onclick="tapNum('3')">3</button>
+        <button type="button" class="np-btn" onclick="tapNum('4')">4</button>
+        <button type="button" class="np-btn" onclick="tapNum('5')">5</button>
+        <button type="button" class="np-btn" onclick="tapNum('6')">6</button>
+        <button type="button" class="np-btn" onclick="tapNum('7')">7</button>
+        <button type="button" class="np-btn" onclick="tapNum('8')">8</button>
+        <button type="button" class="np-btn" onclick="tapNum('9')">9</button>
+        <button type="button" class="np-btn op" onclick="tapBack()">⌫</button>
+        <button type="button" class="np-btn" onclick="tapNum('0')">0</button>
+        <button type="button" class="np-btn op" onclick="tapNextField()">次</button>
       </div>
 
       <button class="next-btn hidden" id="next-btn" onclick="nextQuestion()">つぎの問題へ ➡️</button>
@@ -655,11 +676,23 @@ function submitAnswer(){
         ${q.n}/${q.d} × ${q.k} → <b>${mn}</b>/${q.d} × <b>${mk}</b> = ${mn*mk}/${q.d}`;
       mc.style.display='';
     }
-    /* 約分カード（約分前の答えで正解した場合のみ） */
-    if(q.canYak&&!(an===q.yakN&&ad===q.yakD)){
+    /* 約分カード（約分可能なら必ず表示） */
+    if(q.canYak){
       document.getElementById('yak-show-n').textContent=q.ansN;
       document.getElementById('yak-show-d').textContent=q.ansD;
       document.getElementById('yakubun-card').style.display='';
+      if(an===q.yakN&&ad===q.yakD){
+        score+=5;
+        document.getElementById('yak-n').value=q.yakN;
+        document.getElementById('yak-d').value=q.yakD;
+        document.getElementById('yak-n').className='yak-input correct';
+        document.getElementById('yak-d').className='yak-input correct';
+        document.getElementById('yak-btn').disabled=true;
+        const fb=document.getElementById('yak-fb');
+        fb.className='yak-fb ok';
+        fb.textContent='⭕ すでに約分まで正解！ +5点 ✨';
+        updateScoreUI();
+      }
       /* 約分ボーナスは挑戦してもしなくても次へ進める */
       document.getElementById('next-btn').classList.remove('hidden');
     } else {
@@ -728,6 +761,36 @@ document.addEventListener('keydown',e=>{
     else if(!document.getElementById('next-btn').classList.contains('hidden')){nextQuestion();}
   }
 });
+
+/* ---- タッチテンキー ---- */
+function getTapTarget(){
+  const a=document.activeElement;
+  if(a&&a.tagName==='INPUT'&&(a.classList.contains('ans-input')||a.classList.contains('yak-input')||a.classList.contains('num-input'))){
+    return a;
+  }
+  return document.getElementById('ans-n');
+}
+function tapNum(ch){
+  const t=getTapTarget();
+  if(!t||t.disabled) return;
+  t.value=(t.value||'')+ch;
+  t.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function tapBack(){
+  const t=getTapTarget();
+  if(!t||t.disabled) return;
+  t.value=(t.value||'').slice(0,-1);
+  t.dispatchEvent(new Event('input',{bubbles:true}));
+}
+function tapNextField(){
+  const ids=['ans-n','ans-d','yak-n','yak-d','inp-n','inp-d','inp-k'];
+  const cur=getTapTarget().id;
+  const i=Math.max(0,ids.indexOf(cur));
+  for(let k=1;k<=ids.length;k++){
+    const nx=document.getElementById(ids[(i+k)%ids.length]);
+    if(nx&&nx.offsetParent!==null&&!nx.disabled){nx.focus();break;}
+  }
+}
 </script>
 </body>
 </html>
