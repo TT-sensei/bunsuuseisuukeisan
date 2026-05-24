@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分数×÷整数 しくみ図鑑</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:'Helvetica Neue','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;
+  background:linear-gradient(135deg,#fce4ec 0%,#e8f4fd 50%,#e8f5e9 100%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:16px 12px 40px;color:#2c3e50;
+}
+h1{font-size:1.25rem;font-weight:700;color:#2c3e50;margin-bottom:.9rem;text-align:center;letter-spacing:.04em;}
+.card{background:#fff;border-radius:20px;box-shadow:0 6px 28px rgba(0,0,0,0.10);padding:18px 16px 22px;max-width:680px;width:100%;}
+
+/* ---- タブ ---- */
+.top-tabs{display:flex;gap:8px;margin-bottom:1.1rem;}
+.top-tab{flex:1;padding:13px 6px;font-size:.98rem;font-weight:700;border:2.5px solid #ccc;border-radius:14px;background:#f0f0f0;color:#888;cursor:pointer;font-family:inherit;transition:all .15s;}
+.top-tab.active-learn{background:#fff8e1;color:#e65100;border-color:#ffa726;}
+.top-tab.active-quiz{background:#fce4ec;color:#880e4f;border-color:#f06292;}
+
+/* ---- 学習モード切替 ---- */
+.mode-switch{display:flex;gap:10px;margin-bottom:1.1rem;}
+.mode-btn{flex:1;padding:13px 8px;font-size:1rem;font-weight:700;border:2.5px solid #ccc;border-radius:14px;background:#f0f0f0;color:#888;cursor:pointer;transition:all .15s;font-family:inherit;}
+.mode-btn.active-mul{background:#e8f4fd;color:#1565c0;border-color:#42a5f5;}
+.mode-btn.active-div{background:#e8f5e9;color:#2e7d32;border-color:#66bb6a;}
+
+/* ---- 数字入力 ---- */
+.controls-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:1.1rem;flex-wrap:wrap;}
+.fraction-box{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.frac-line{width:56px;height:2.5px;background:#2c3e50;border-radius:2px;}
+.num-input{width:56px;height:54px;font-size:1.4rem;font-weight:700;text-align:center;border:2px solid #ccc;border-radius:10px;background:#fafafa;color:#2c3e50;font-family:inherit;-moz-appearance:textfield;transition:border-color .15s;}
+.num-input::-webkit-inner-spin-button,.num-input::-webkit-outer-spin-button{display:none;}
+.num-input:focus{outline:none;border-color:#42a5f5;background:#fff;}
+.op-label,.eq-label{font-size:1.6rem;font-weight:700;color:#888;}
+.result-box{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:56px;}
+.result-num{font-size:1.4rem;font-weight:700;}
+.result-num-mul{color:#1565c0;}.result-num-div{color:#2e7d32;}
+
+/* ---- 面積図 ---- */
+.visual-area{margin-bottom:1rem;min-height:60px;}
+.squares-wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+.unit-sq{display:grid;border:2.5px solid #7f8c8d;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;}
+.cell{border:.5px solid #d0d0d0;background:#f5f7fa;transition:background .15s;}
+.cell.filled-mul{background:#42a5f5;}
+.cell.filled-div-base{background:#b2dfdb;}
+.cell.filled-div-answer{background:#26a69a;}
+.sq-num-label{position:absolute;top:2px;left:4px;font-size:9px;color:rgba(0,0,0,.35);font-weight:600;pointer-events:none;}
+
+/* ---- 解説 ---- */
+.explanation-card{border:1.5px solid #e0e0e0;border-radius:14px;padding:14px 16px 16px;background:#fdfdfd;}
+.exp-line{font-size:.96rem;line-height:1.85;color:#2c3e50;}
+.exp-line+.exp-line{margin-top:4px;}
+.acc-mul{color:#1565c0;font-weight:700;}.acc-div{color:#2e7d32;font-weight:700;}.acc-big{font-size:1.05rem;}
+.step-pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center;}
+.pill{padding:5px 12px;border-radius:999px;font-size:.88rem;font-weight:700;}
+.pill-mul{background:#bbdefb;color:#0d47a1;}
+.pill-div{background:#c8e6c9;color:#1b5e20;}
+.pill-gray{background:#eceff1;color:#455a64;}
+.pill-arrow{color:#aaa;font-size:1rem;}
+
+/* ---- 問題モード:スタート ---- */
+.quiz-start{text-align:center;padding:8px 0 4px;}
+.quiz-start-emoji{font-size:2.8rem;margin-bottom:.5rem;}
+.quiz-start h2{font-size:1.2rem;font-weight:700;color:#880e4f;margin-bottom:.6rem;}
+.quiz-start p{font-size:.95rem;color:#555;line-height:1.8;margin-bottom:1rem;}
+.rule-cards{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;justify-content:center;}
+.rule-card{flex:1;min-width:130px;background:#f5f7fa;border-radius:12px;padding:10px 12px;font-size:.88rem;color:#2c3e50;line-height:1.6;}
+.rule-card b{display:block;font-size:1rem;margin-bottom:2px;}
+.rule-card.rc-mul b{color:#1565c0;}
+.rule-card.rc-div b{color:#2e7d32;}
+.rule-card.rc-yak b{color:#e65100;}
+.start-btn{padding:16px 40px;font-size:1.2rem;font-weight:700;border:none;border-radius:16px;background:linear-gradient(135deg,#f06292,#e91e63);color:#fff;cursor:pointer;font-family:inherit;transition:transform .1s,box-shadow .1s;box-shadow:0 4px 12px rgba(240,98,146,.4);}
+.start-btn:active{transform:scale(.96);}
+
+/* ---- ヘッダー ---- */
+.quiz-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem;gap:8px;flex-wrap:wrap;}
+.score-board{display:flex;gap:8px;flex-wrap:wrap;}
+.score-chip{padding:6px 14px;border-radius:999px;font-size:.9rem;font-weight:700;}
+.chip-score{background:#fce4ec;color:#880e4f;}
+.chip-hi{background:#f3e5f5;color:#6a1b9a;}
+.chip-timer{background:#fff3e0;color:#e65100;font-size:1.1rem;font-weight:700;min-width:76px;text-align:center;border-radius:999px;padding:6px 14px;}
+.chip-timer.danger{background:#ffebee;color:#c62828;animation:pulse .5s infinite alternate;}
+@keyframes pulse{from{opacity:1;}to{opacity:.45;}}
+
+/* ---- ストリーク ---- */
+.streak-bar{text-align:center;font-size:1.3rem;letter-spacing:2px;min-height:28px;margin-bottom:.5rem;}
+
+/* ---- 問題式 ---- */
+.quiz-q{text-align:center;margin:.3rem 0 .9rem;}
+.quiz-q-expr{display:inline-flex;align-items:center;gap:14px;font-size:2rem;font-weight:700;color:#2c3e50;background:#f5f7fa;border-radius:18px;padding:14px 24px;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.quiz-frac{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.quiz-frac-line{width:44px;height:3px;background:#2c3e50;border-radius:2px;}
+.quiz-frac span{font-size:1.6rem;font-weight:700;}
+.op-badge{display:inline-block;padding:4px 14px;border-radius:999px;font-size:1.4rem;font-weight:700;}
+.op-badge.mul{background:#e3f2fd;color:#1565c0;}
+.op-badge.div{background:#e8f5e9;color:#2e7d32;}
+
+/* ---- 答え入力 ---- */
+.ans-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:.9rem;flex-wrap:wrap;}
+.ans-label{font-size:1rem;font-weight:700;color:#555;}
+.ans-input{width:70px;height:58px;font-size:1.5rem;font-weight:700;text-align:center;border:2.5px solid #ccc;border-radius:12px;background:#fafafa;color:#2c3e50;font-family:inherit;-moz-appearance:textfield;transition:border-color .2s,background .2s;}
+.ans-input::-webkit-inner-spin-button,.ans-input::-webkit-outer-spin-button{display:none;}
+.ans-input:focus{outline:none;border-color:#f06292;background:#fff;}
+.ans-input.correct{border-color:#43a047;background:#e8f5e9;}
+.ans-input.wrong{border-color:#e53935;background:#ffebee;animation:shake .3s;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);};}
+.submit-btn{padding:14px 28px;font-size:1.1rem;font-weight:700;border:none;border-radius:14px;background:linear-gradient(135deg,#f06292,#e91e63);color:#fff;cursor:pointer;font-family:inherit;transition:transform .1s;box-shadow:0 3px 10px rgba(240,98,146,.35);}
+.submit-btn:active{transform:scale(.96);}
+.submit-btn:disabled{background:#ccc;box-shadow:none;cursor:default;}
+
+/* ---- フィードバック ---- */
+.feedback-area{min-height:50px;text-align:center;font-size:1.05rem;font-weight:700;margin-bottom:.7rem;}
+.fb-correct{color:#2e7d32;}
+.fb-wrong{color:#c62828;}
+
+/* ---- 途中計算ヒント（教科書スタイル） ---- */
+.midstep-card{background:#e3f2fd;border:1.5px solid #42a5f5;border-radius:14px;padding:10px 14px;margin-bottom:.7rem;font-size:.9rem;color:#0d47a1;line-height:1.8;display:none;}
+.midstep-card.div{background:#e8f5e9;border-color:#66bb6a;color:#1b5e20;}
+
+/* ---- 約分カード ---- */
+.yakubun-card{background:#fff8e1;border:2px solid #ffa726;border-radius:14px;padding:12px 16px;margin-bottom:.8rem;display:none;}
+.yak-title{font-weight:700;color:#e65100;margin-bottom:6px;font-size:1rem;}
+.yakubun-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.yak-frac{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.yak-frac-line{width:40px;height:2px;background:#e65100;}
+.yak-frac span{font-size:1.2rem;font-weight:700;color:#e65100;}
+.yak-input{width:58px;height:50px;font-size:1.3rem;font-weight:700;text-align:center;border:2px solid #ffa726;border-radius:10px;background:#fff;color:#2c3e50;font-family:inherit;-moz-appearance:textfield;}
+.yak-input::-webkit-inner-spin-button,.yak-input::-webkit-outer-spin-button{display:none;}
+.yak-input:focus{outline:none;border-color:#e65100;}
+.yak-input.correct{border-color:#43a047;background:#e8f5e9;}
+.yak-input.wrong{border-color:#e53935;background:#ffebee;}
+.yak-btn{padding:10px 20px;font-size:.95rem;font-weight:700;border:none;border-radius:10px;background:#ffa726;color:#fff;cursor:pointer;font-family:inherit;}
+.yak-btn:disabled{background:#ccc;cursor:default;}
+.yak-fb{font-size:.93rem;font-weight:700;margin-top:6px;}
+.yak-fb.ok{color:#2e7d32;}.yak-fb.ng{color:#c62828;}
+
+/* ---- 次へボタン ---- */
+.next-btn{display:block;width:100%;padding:14px;font-size:1.1rem;font-weight:700;border:none;border-radius:14px;background:linear-gradient(135deg,#7b1fa2,#6a1b9a);color:#fff;cursor:pointer;font-family:inherit;margin-top:.5rem;transition:transform .1s;box-shadow:0 3px 10px rgba(123,31,162,.3);}
+.next-btn:active{transform:scale(.98);}
+.next-btn.hidden{display:none;}
+
+/* ---- 結果画面 ---- */
+.result-screen{text-align:center;padding:8px 0;display:none;}
+.result-emoji{font-size:3rem;margin-bottom:.4rem;}
+.result-screen h2{font-size:1.4rem;font-weight:700;color:#880e4f;margin-bottom:.7rem;}
+.result-big{font-size:3rem;font-weight:700;color:#f06292;margin-bottom:.3rem;}
+.result-detail{font-size:1rem;color:#555;margin-bottom:.8rem;}
+.new-record{font-size:1.1rem;font-weight:700;color:#e65100;margin-bottom:.8rem;animation:bounce .5s infinite alternate;}
+@keyframes bounce{from{transform:scale(1);}to{transform:scale(1.08);};}
+.rank-msg{font-size:1.2rem;font-weight:700;margin-bottom:1rem;}
+
+/* ---- コンフェッティ ---- */
+#confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;}
+
+/* ---- 問題進行エリア ---- */
+/* quiz-playing は JS で style.display 直接制御 */
+</style>
+</head>
+<body>
+<canvas id="confetti-canvas"></canvas>
+<h1>🔢 分数 × ÷ 整数　しくみ図鑑 📐</h1>
+<div class="card">
+
+  <div class="top-tabs">
+    <button class="top-tab active-learn" id="tab-learn" onclick="switchTab('learn')">📖 学習モード</button>
+    <button class="top-tab" id="tab-quiz" onclick="switchTab('quiz')">🎯 問題モード</button>
+  </div>
+
+  <!-- ========== 学習モード ========== -->
+  <div id="learn-area">
+    <div class="mode-switch">
+      <button class="mode-btn active-mul" id="btn-mul" onclick="setMode('mul')">✖️ 分数 × 整数</button>
+      <button class="mode-btn" id="btn-div" onclick="setMode('div')">➗ 分数 ÷ 整数</button>
+    </div>
+    <div class="controls-row">
+      <div class="fraction-box">
+        <input class="num-input" id="inp-n" type="number" min="1" max="12" value="2" inputmode="numeric">
+        <div class="frac-line"></div>
+        <input class="num-input" id="inp-d" type="number" min="2" max="12" value="5" inputmode="numeric">
+      </div>
+      <div class="op-label" id="op-sym">×</div>
+      <input class="num-input" id="inp-k" type="number" min="1" max="10" value="3" inputmode="numeric">
+      <div class="eq-label">=</div>
+      <div class="result-box" id="result-box"></div>
+    </div>
+    <div class="visual-area"><div class="squares-wrap" id="squares"></div></div>
+    <div class="explanation-card" id="exp-card"></div>
+  </div>
+
+  <!-- ========== 問題モード ========== -->
+  <div id="quiz-area" style="display:none">
+
+    <!-- スタート -->
+    <div class="quiz-start" id="quiz-start">
+      <div class="quiz-start-emoji">🚀</div>
+      <h2>60秒チャレンジ！</h2>
+      <p>× と ÷ の問題がランダムに出るよ！<br>できるだけ速く、正確に答えよう！</p>
+      <div class="rule-cards">
+        <div class="rule-card rc-mul">
+          <b>✖️ かけ算のコツ</b>
+          分子 × 整数<br>分母はそのまま
+        </div>
+        <div class="rule-card rc-div">
+          <b>➗ わり算のコツ</b>
+          分子はそのまま<br>分母 × 整数
+        </div>
+        <div class="rule-card rc-yak">
+          <b>✨ 約分ボーナス</b>
+          正解後に約分で<br>さらに +5点！
+        </div>
+      </div>
+      <p style="font-size:.88rem;color:#888;margin-bottom:.8rem">正解 <b>+10点</b> ／ 約分ボーナス <b>+5点</b></p>
+      <button class="start-btn" onclick="startQuiz()">🎮 スタート！</button>
+    </div>
+
+    <!-- 結果 -->
+    <div class="result-screen" id="result-screen">
+      <div class="result-emoji" id="res-emoji">🎉</div>
+      <h2>タイムアップ！</h2>
+      <div class="result-big" id="res-score">0 点</div>
+      <div class="rank-msg" id="res-rank"></div>
+      <div class="result-detail" id="res-detail"></div>
+      <div class="new-record" id="res-newrec" style="display:none">🏆 新記録！すごい！</div>
+      <button class="start-btn" onclick="startQuiz()">🔄 もう一度！</button>
+    </div>
+
+    <!-- プレイ中 -->
+    <div class="quiz-playing" id="quiz-playing" style="display:none">
+      <div class="quiz-header">
+        <div class="score-board">
+          <div class="score-chip chip-score" id="q-score">🌟 0 点</div>
+          <div class="score-chip chip-hi" id="q-hi">👑 0</div>
+        </div>
+        <div class="score-chip chip-timer" id="q-timer">⏱ 60</div>
+      </div>
+      <div class="streak-bar" id="streak-bar"></div>
+
+      <div class="quiz-q">
+        <div class="quiz-q-expr" id="q-expr"></div>
+      </div>
+
+      <div class="ans-row">
+        <div class="fraction-box">
+          <input class="ans-input" id="ans-n" type="number" min="1" max="200" inputmode="numeric" placeholder="？">
+          <div class="frac-line" style="width:70px;margin:2px 0"></div>
+          <input class="ans-input" id="ans-d" type="number" min="1" max="200" inputmode="numeric" placeholder="？">
+        </div>
+        <button class="submit-btn" id="submit-btn" onclick="submitAnswer()">こたえる ✏️</button>
+      </div>
+
+      <div class="feedback-area" id="feedback"></div>
+
+      <!-- 途中計算ヒント -->
+      <div class="midstep-card" id="midstep-card"></div>
+
+      <!-- 約分カード -->
+      <div class="yakubun-card" id="yakubun-card">
+        <div class="yak-title">✨ 約分できるよ！まだいける？</div>
+        <div class="yakubun-row">
+          <div class="yak-frac">
+            <span id="yak-show-n">?</span>
+            <div class="yak-frac-line"></div>
+            <span id="yak-show-d">?</span>
+          </div>
+          <span style="font-size:1.3rem;color:#e65100;font-weight:700">＝</span>
+          <div class="fraction-box">
+            <input class="yak-input" id="yak-n" type="number" min="1" max="200" inputmode="numeric" placeholder="？">
+            <div class="yak-frac-line" style="width:58px;margin:2px 0"></div>
+            <input class="yak-input" id="yak-d" type="number" min="1" max="200" inputmode="numeric" placeholder="？">
+          </div>
+          <button class="yak-btn" id="yak-btn" onclick="submitYakubun()">かくにん</button>
+        </div>
+        <div class="yak-fb" id="yak-fb"></div>
+      </div>
+
+      <button class="next-btn hidden" id="next-btn" onclick="nextQuestion()">つぎの問題へ ➡️</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ユーティリティ
+============================================================ */
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function isFilled(row,total,count){return row>=total-count;}
+function randInt(lo,hi){return lo+Math.floor(Math.random()*(hi-lo+1));}
+function makeSqSize(n){
+  const av=Math.min(580,window.innerWidth-56);
+  return Math.max(44,Math.min(100,Math.floor((av-(n-1)*10)/n)));
+}
+
+/* ============================================================
+   Web Audio
+============================================================ */
+let AC=null;
+function getAC(){
+  if(!AC) AC=new(window.AudioContext||window.webkitAudioContext)();
+  return AC;
+}
+function playTone(freq,type,dur,vol){
+  try{
+    const ac=getAC();
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(vol||0.18,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);
+    o.start();o.stop(ac.currentTime+dur);
+  }catch(e){}
+}
+function soundCorrect(){
+  playTone(523,'sine',.12,.2);
+  setTimeout(()=>playTone(659,'sine',.12,.2),100);
+  setTimeout(()=>playTone(784,'sine',.18,.2),200);
+}
+function soundYakubun(){
+  [523,659,784,1047].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',.15,.18),i*80));
+}
+function soundWrong(){
+  playTone(200,'sawtooth',.25,.15);
+  setTimeout(()=>playTone(150,'sawtooth',.2,.12),120);
+}
+function soundTick(){playTone(880,'square',.05,.06);}
+function soundTimeup(){
+  [392,349,330,294].forEach((f,i)=>setTimeout(()=>playTone(f,'triangle',.25,.15),i*120));
+}
+function soundStart(){
+  [262,330,392,523].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',.18,.18),i*90));
+}
+function soundNewRecord(){
+  [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>playTone(f,'sine',.2,.2),i*80));
+}
+
+/* ============================================================
+   コンフェッティ
+============================================================ */
+const cnv=document.getElementById('confetti-canvas');
+const ctx2=cnv.getContext('2d');
+let particles=[];
+function launchConfetti(n){
+  cnv.width=window.innerWidth;cnv.height=window.innerHeight;
+  const colors=['#f06292','#42a5f5','#ffa726','#66bb6a','#ab47bc','#26c6da','#ffee58'];
+  for(let i=0;i<n;i++){
+    particles.push({
+      x:Math.random()*cnv.width,y:-10,
+      vx:(Math.random()-.5)*4,vy:Math.random()*4+2,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      size:Math.random()*8+4,angle:Math.random()*360,va:(Math.random()-.5)*8,life:1
+    });
+  }
+  requestAnimationFrame(drawConfetti);
+}
+function drawConfetti(){
+  ctx2.clearRect(0,0,cnv.width,cnv.height);
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{
+    ctx2.save();ctx2.translate(p.x,p.y);ctx2.rotate(p.angle*Math.PI/180);
+    ctx2.fillStyle=p.color;ctx2.globalAlpha=p.life;
+    ctx2.fillRect(-p.size/2,-p.size/2,p.size,p.size);
+    ctx2.restore();
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.12;p.angle+=p.va;p.life-=.016;
+  });
+  if(particles.length>0) requestAnimationFrame(drawConfetti);
+  else ctx2.clearRect(0,0,cnv.width,cnv.height);
+}
+
+/* ============================================================
+   タブ切替
+============================================================ */
+function switchTab(t){
+  document.getElementById('learn-area').style.display=t==='learn'?'':'none';
+  document.getElementById('quiz-area').style.display=t==='quiz'?'':'none';
+  document.getElementById('tab-learn').className='top-tab'+(t==='learn'?' active-learn':'');
+  document.getElementById('tab-quiz').className='top-tab'+(t==='quiz'?' active-quiz':'');
+}
+
+/* ============================================================
+   学習モード
+============================================================ */
+let learnMode='mul';
+function setMode(m){
+  learnMode=m;
+  document.getElementById('btn-mul').className='mode-btn'+(m==='mul'?' active-mul':'');
+  document.getElementById('btn-div').className='mode-btn'+(m==='div'?' active-div':'');
+  document.getElementById('op-sym').textContent=m==='mul'?'×':'÷';
+  update();
+}
+function getInputs(){
+  let n=parseInt(document.getElementById('inp-n').value)||1;
+  let d=parseInt(document.getElementById('inp-d').value)||2;
+  let k=parseInt(document.getElementById('inp-k').value)||1;
+  d=clamp(d,2,12);n=clamp(n,1,d-1);k=clamp(k,1,10);
+  return{n,d,k};
+}
+function update(){
+  const{n,d,k}=getInputs();
+  if(learnMode==='mul') renderMul(n,d,k);
+  else renderDiv(n,d,k);
+}
+
+/* ---- かけ算レンダリング ---- */
+function renderMul(n,d,k){
+  /* 教科書スタイル：分子×整数、途中で約分できるか確認 */
+  const rawN=n*k, rawD=d;
+  const g=gcd(rawN,rawD);
+  const ansN=rawN/g, ansD=rawD/g;
+  const canMidReduce=(g>1);       /* 途中約分できる */
+  const sqSize=makeSqSize(k);
+  const whole=Math.floor(rawN/rawD), rem=rawN%rawD;
+
+  document.getElementById('result-box').innerHTML=
+    `<span class="result-num result-num-mul">${rawN}</span><div class="frac-line"></div><span class="result-num result-num-mul">${rawD}</span>`;
+
+  /* 面積図 */
+  const wrap=document.getElementById('squares'); wrap.innerHTML='';
+  for(let s=0;s<k;s++){
+    const sq=document.createElement('div');
+    sq.className='unit-sq';
+    sq.style.cssText=`width:${sqSize}px;height:${sqSize}px;grid-template-rows:repeat(${d},1fr);grid-template-columns:1fr;`;
+    for(let r=0;r<d;r++){
+      const cell=document.createElement('div');
+      cell.className='cell'+(isFilled(r,d,n)?' filled-mul':'');
+      sq.appendChild(cell);
+    }
+    const lbl=document.createElement('div');lbl.className='sq-num-label';lbl.textContent=(s+1)+'つめ';sq.appendChild(lbl);
+    wrap.appendChild(sq);
+  }
+
+  /* 解説文 */
+  let h=`<div class="exp-line">もとの数は <span class="acc-mul acc-big">${n}/${d}</span> です。「<span class="acc-mul">1/${d}</span>」が <span class="acc-mul acc-big">${n}個</span> ある大きさです。</div>
+<div class="exp-line">これが <span class="acc-mul acc-big">${k}つ分</span> になるので、分子を <span class="acc-mul">${n} × ${k} ＝ ${rawN}</span> にします。分母の <span class="acc-mul">${d}</span> はそのまま。</div>`;
+  if(canMidReduce){
+    h+=`<div class="exp-line">💡 計算のとちゅうで <span class="acc-mul">${n}</span> と <span class="acc-mul">${k}</span> の最大公約数 <span class="acc-mul">${g}</span> で約分すると簡単になります。</div>`;
+  }
+  h+=`<div class="step-pills"><span class="pill pill-mul">${n}/${d} × ${k}</span><span class="pill-arrow">→</span>`;
+  if(canMidReduce){
+    const mn=n/g,mk=k/g;
+    h+=`<span class="pill pill-gray">${mn}/${d} × ${mk}</span><span class="pill-arrow">→</span>`;
+  }
+  h+=`<span class="pill pill-mul">${rawN}/${rawD}</span>`;
+  if(g>1) h+=`<span class="pill-arrow">＝</span><span class="pill pill-gray">${ansN}/${ansD}</span>`;
+  if(whole>0&&rem>0) h+=`<span class="pill-arrow">＝</span><span class="pill pill-gray">${whole}と${rem}/${rawD}</span>`;
+  if(whole>0&&rem===0) h+=`<span class="pill-arrow">＝</span><span class="pill pill-gray">${whole}</span>`;
+  h+='</div>';
+  document.getElementById('exp-card').innerHTML=h;
+}
+
+/* ---- わり算レンダリング ---- */
+function renderDiv(n,d,k){
+  /* 教科書スタイル：分子はそのまま、分母×整数
+     ただし分子が整数で割り切れる場合は分母を先に約分する方法も示す */
+  const rawN=n, rawD=d*k;
+  const g=gcd(rawN,rawD);
+  const ansN=rawN/g, ansD=rawD/g;
+  const SQ=Math.min(200,window.innerWidth-120);
+
+  document.getElementById('result-box').innerHTML=
+    `<span class="result-num result-num-div">${rawN}</span><div class="frac-line"></div><span class="result-num result-num-div">${rawD}</span>`;
+
+  /* 面積図 */
+  const wrap=document.getElementById('squares'); wrap.innerHTML='';
+  const sq=document.createElement('div');
+  sq.className='unit-sq';
+  sq.style.cssText=`width:${SQ}px;height:${SQ}px;grid-template-columns:repeat(${k},1fr);grid-template-rows:repeat(${d},1fr);`;
+  for(let r=0;r<d;r++){
+    for(let c=0;c<k;c++){
+      const cell=document.createElement('div');
+      const inf=isFilled(r,d,n);
+      cell.className='cell'+(inf&&c===0?' filled-div-answer':inf?' filled-div-base':'');
+      if(c<k-1) cell.style.borderRight='2px solid #7f8c8d';
+      sq.appendChild(cell);
+    }
+  }
+  wrap.appendChild(sq);
+
+  /* 解説文 */
+  let h=`<div class="exp-line">もとの数は <span class="acc-div acc-big">${n}/${d}</span> です。「<span class="acc-div">1/${d}</span>」が <span class="acc-div acc-big">${n}個</span> ある大きさです。</div>
+<div class="exp-line">これを <span class="acc-div acc-big">${k}つ</span> に等しく分けます。分子の <span class="acc-div">${n}</span> はそのまま、分母を <span class="acc-div">${d} × ${k} ＝ ${rawD}</span> にします。</div>`;
+
+  /* 分子がkで割り切れる場合のコツ */
+  if(n%k===0){
+    h+=`<div class="exp-line">💡 分子の <span class="acc-div">${n}</span> が ${k} でわりきれるので、分母と分子に同じ数をかけて分子を ${k} の倍数にすることで、先に約分できます。</div>`;
+  }
+
+  h+=`<div class="step-pills"><span class="pill pill-div">${n}/${d} ÷ ${k}</span><span class="pill-arrow">→</span><span class="pill pill-gray">${n}/(${d}×${k})</span><span class="pill-arrow">→</span><span class="pill pill-div">${rawN}/${rawD}</span>`;
+  if(g>1) h+=`<span class="pill-arrow">＝</span><span class="pill pill-gray">${ansN}/${ansD}</span>`;
+  h+='</div>';
+  document.getElementById('exp-card').innerHTML=h;
+}
+
+['inp-n','inp-d','inp-k'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',update);
+});
+update();
+
+/* ============================================================
+   問題モード
+============================================================ */
+const LS_KEY='frac_hiscore_v2';
+let hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
+let score=0,correctCount=0,wrongCount=0;
+let timerSec=30,timerID=null;
+let currentQ=null;
+let streak=0; /* 連続正解 */
+
+/* ---- 問題生成（教科書準拠・九九範囲） ----
+   かけ算: n/d × k  分子n×k <= 81, d<=9, k<=9
+   わり算: n/d ÷ k  分母d×k <= 81, d<=9, k<=9
+   ランダムに途中約分できるもの・できないものが混在
+*/
+function genQuestion(){
+  const op=Math.random()<0.5?'mul':'div';
+  let n,d,k,ansN,ansD,tries=0;
+  if(op==='mul'){
+    do{d=randInt(2,9);k=randInt(2,9);n=randInt(1,d-1);tries++;}
+    while(n*k>81&&tries<300);
+    ansN=n*k; ansD=d;
+  } else {
+    do{d=randInt(2,9);k=randInt(2,9);n=randInt(1,d-1);tries++;}
+    while(d*k>81&&tries<300);
+    ansN=n; ansD=d*k;
+  }
+  const g=gcd(ansN,ansD);
+  /* 途中約分ヒント（かけ算のみ：分子とkのgcd） */
+  const midG=op==='mul'?gcd(n,k):1;
+  return{n,d,k,op,ansN,ansD,canYak:g>1,yakN:ansN/g,yakD:ansD/g,midG};
+}
+
+/* ---- ランク判定 ---- */
+function getRank(s){
+  if(s>=150) return{emoji:'👑',msg:'伝説の計算王！'};
+  if(s>=120) return{emoji:'🏆',msg:'すごい！マスタークラス！'};
+  if(s>=90)  return{emoji:'🥇',msg:'かなり得意だね！'};
+  if(s>=60)  return{emoji:'🥈',msg:'上手になってきた！'};
+  if(s>=30)  return{emoji:'🥉',msg:'いい調子！練習あるのみ！'};
+  return{emoji:'💪',msg:'これからどんどん上達するよ！'};
+}
+
+function startQuiz(){
+  score=0;correctCount=0;wrongCount=0;timerSec=60;streak=0;
+  hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
+  document.getElementById('quiz-start').style.display='none';
+  document.getElementById('result-screen').style.display='none';
+  document.getElementById('quiz-playing').style.display='';
+  updateScoreUI();
+  nextQuestion();
+  soundStart();
+  clearInterval(timerID);
+  timerID=setInterval(()=>{
+    timerSec--;
+    const el=document.getElementById('q-timer');
+    el.textContent='⏱ '+timerSec;
+    el.className='score-chip chip-timer'+(timerSec<=15?' danger':'');
+    if(timerSec<=15) soundTick();
+    if(timerSec<=0) endQuiz();
+  },1000);
+}
+
+function endQuiz(){
+  clearInterval(timerID);
+  soundTimeup();
+  // タイムアップ後の入力を全部無効化
+  document.getElementById('submit-btn').disabled=true;
+  document.getElementById('yak-btn').disabled=true;
+  ['ans-n','ans-d','yak-n','yak-d'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.disabled=true;
+  });
+  setTimeout(()=>{
+    ['ans-n','ans-d','yak-n','yak-d'].forEach(id=>{
+      const e=document.getElementById(id); if(e) e.disabled=false;
+    });
+    document.getElementById('quiz-playing').style.display='none';
+  const isNew=score>hiScore;
+  if(isNew){hiScore=score;localStorage.setItem(LS_KEY,hiScore);soundNewRecord();launchConfetti(120);}
+  else if(score>=60) launchConfetti(60);
+  const rank=getRank(score);
+  document.getElementById('res-emoji').textContent=rank.emoji;
+  document.getElementById('res-score').textContent=score+' 点';
+  document.getElementById('res-rank').textContent=rank.msg;
+  document.getElementById('res-detail').textContent='正解 '+correctCount+' 問 ／ まちがい '+wrongCount+' 問';
+  document.getElementById('res-newrec').style.display=isNew?'':'none';
+  document.getElementById('result-screen').style.display='';
+  },400);
+}
+
+function nextQuestion(){
+  if(timerSec<=0) return; // タイムアップ後は新問題を出さない
+  currentQ=genQuestion();
+  renderQuestion(currentQ);
+  document.getElementById('feedback').innerHTML='';
+  document.getElementById('midstep-card').style.display='none';
+  document.getElementById('yakubun-card').style.display='none';
+  document.getElementById('yak-fb').textContent='';
+  document.getElementById('next-btn').classList.add('hidden');
+  document.getElementById('submit-btn').disabled=false;
+  document.getElementById('yak-btn').disabled=false;
+  ['ans-n','ans-d'].forEach(id=>{const e=document.getElementById(id);e.value='';e.className='ans-input';});
+  ['yak-n','yak-d'].forEach(id=>{const e=document.getElementById(id);e.value='';e.className='yak-input';});
+  document.getElementById('ans-n').focus();
+  updateStreakBar();
+}
+
+function renderQuestion(q){
+  const isMul=q.op==='mul';
+  const opBadge=`<span class="op-badge ${isMul?'mul':'div'}">${isMul?'×':'÷'}</span>`;
+  document.getElementById('q-expr').innerHTML=
+    `<div class="quiz-frac"><span>${q.n}</span><div class="quiz-frac-line"></div><span>${q.d}</span></div>
+     ${opBadge}
+     <span>${q.k}</span>
+     <span style="font-size:1.4rem;color:#aaa">=</span>
+     <div class="quiz-frac" style="opacity:.25"><span>?</span><div class="quiz-frac-line"></div><span>?</span></div>`;
+}
+
+function submitAnswer(){
+  if(!currentQ) return;
+  const an=parseInt(document.getElementById('ans-n').value);
+  const ad=parseInt(document.getElementById('ans-d').value);
+  const q=currentQ;
+  /* 約分前・約分後どちらも正解 */
+  const ok=(an===q.ansN&&ad===q.ansD)||(an===q.yakN&&ad===q.yakD);
+  document.getElementById('submit-btn').disabled=true;
+
+  if(ok){
+    score+=10; correctCount++; streak++;
+    document.getElementById('ans-n').className='ans-input correct';
+    document.getElementById('ans-d').className='ans-input correct';
+    const streakBonus=streak>=3?` 🔥${streak}連続！`:'';
+    document.getElementById('feedback').innerHTML=`<span class="fb-correct">⭕ せいかい！ +10点${streakBonus}</span>`;
+    if(streak>=3) launchConfetti(30);
+    soundCorrect();
+    updateScoreUI();
+    updateStreakBar();
+
+    /* 途中計算ヒント（かけ算で途中約分できる場合） */
+    if(q.op==='mul'&&q.midG>1){
+      const mc=document.getElementById('midstep-card');
+      mc.className='midstep-card';
+      const mn=q.n/q.midG, mk=q.k/q.midG;
+      mc.innerHTML=`💡 <b>途中で約分するともっとかんたん！</b><br>
+        ${q.n}/${q.d} × ${q.k} → <b>${mn}</b>/${q.d} × <b>${mk}</b> = ${mn*mk}/${q.d}`;
+      mc.style.display='';
+    }
+    /* 約分カード（約分前の答えで正解した場合のみ） */
+    if(q.canYak&&!(an===q.yakN&&ad===q.yakD)){
+      document.getElementById('yak-show-n').textContent=q.ansN;
+      document.getElementById('yak-show-d').textContent=q.ansD;
+      document.getElementById('yakubun-card').style.display='';
+    } else {
+      document.getElementById('next-btn').classList.remove('hidden');
+    }
+  } else {
+    wrongCount++; streak=0;
+    document.getElementById('ans-n').className='ans-input wrong';
+    document.getElementById('ans-d').className='ans-input wrong';
+    soundWrong();
+    updateStreakBar();
+    const hint=q.canYak?`（約分すると ${q.yakN}/${q.yakD}）`:'';
+    /* わり算の解法ヒント表示 */
+    const mc=document.getElementById('midstep-card');
+    if(q.op==='mul'){
+      mc.className='midstep-card';
+      mc.innerHTML=`📌 <b>かけ算のやりかた：</b> 分子 × 整数、分母はそのまま<br>→ ${q.n} × ${q.k} ＝ ${q.ansN}、分母は ${q.d} → 答え：<b>${q.ansN}/${q.ansD}</b>${hint}`;
+    } else {
+      mc.className='midstep-card div';
+      mc.innerHTML=`📌 <b>わり算のやりかた：</b> 分子はそのまま、分母 × 整数<br>→ 分母 ${q.d} × ${q.k} ＝ ${q.ansD}、分子は ${q.n} → 答え：<b>${q.ansN}/${q.ansD}</b>${hint}`;
+    }
+    mc.style.display='';
+    document.getElementById('feedback').innerHTML=
+      `<span class="fb-wrong">❌ ざんねん… 答えは <b>${q.ansN}/${q.ansD}</b>${hint}</span>`;
+    document.getElementById('next-btn').classList.remove('hidden');
+  }
+}
+
+function submitYakubun(){
+  const q=currentQ;
+  const yn=parseInt(document.getElementById('yak-n').value);
+  const yd=parseInt(document.getElementById('yak-d').value);
+  const fb=document.getElementById('yak-fb');
+  if(yn===q.yakN&&yd===q.yakD){
+    score+=5;
+    document.getElementById('yak-n').className='yak-input correct';
+    document.getElementById('yak-d').className='yak-input correct';
+    fb.className='yak-fb ok'; fb.textContent='⭕ 約分もばっちり！ +5点 ✨';
+    document.getElementById('yak-btn').disabled=true;
+    soundYakubun(); launchConfetti(40);
+    updateScoreUI();
+  } else {
+    document.getElementById('yak-n').className='yak-input wrong';
+    document.getElementById('yak-d').className='yak-input wrong';
+    const g=gcd(q.ansN,q.ansD);
+    fb.className='yak-fb ng'; fb.textContent=`❌ もう一度！（ヒント: 最大公約数は ${g}）`;
+  }
+  document.getElementById('next-btn').classList.remove('hidden');
+}
+
+function updateScoreUI(){
+  document.getElementById('q-score').textContent='🌟 '+score+' 点';
+  document.getElementById('q-hi').textContent='👑 '+Math.max(hiScore,score);
+}
+
+function updateStreakBar(){
+  const bar=document.getElementById('streak-bar');
+  if(streak<=0){bar.textContent='';return;}
+  bar.textContent='🔥'.repeat(Math.min(streak,10))+(streak>10?` ×${streak}`:'');
+}
+
+/* ---- Enterキー対応 ---- */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(!document.getElementById('submit-btn').disabled){submitAnswer();}
+    else if(!document.getElementById('next-btn').classList.contains('hidden')){nextQuestion();}
+  }
+});
+</script>
+</body>
+</html>
