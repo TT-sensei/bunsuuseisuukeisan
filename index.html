@@ -526,6 +526,7 @@ const LS_KEY='frac_hiscore_v2';
 let hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
 let score=0,correctCount=0,wrongCount=0;
 let timerSec=30,timerID=null;
+let returnStartID=null;
 let currentQ=null;
 let streak=0; /* 連続正解 */
 
@@ -565,6 +566,7 @@ function getRank(s){
 
 function backToQuizStart(){
   clearInterval(timerID);
+  clearTimeout(returnStartID);
   document.getElementById('quiz-playing').style.display='none';
   document.getElementById('result-screen').style.display='none';
   document.getElementById('quiz-start').style.display='';
@@ -573,6 +575,7 @@ function backToQuizStart(){
   document.getElementById('yakubun-card').style.display='none';
 }
 function startQuiz(){
+  clearTimeout(returnStartID);
   score=0;correctCount=0;wrongCount=0;timerSec=60;streak=0;
   hiScore=parseInt(localStorage.getItem(LS_KEY)||'0');
   document.getElementById('quiz-start').style.display='none';
@@ -616,6 +619,7 @@ function endQuiz(){
   document.getElementById('res-detail').textContent='正解 '+correctCount+' 問 ／ まちがい '+wrongCount+' 問';
   document.getElementById('res-newrec').style.display=isNew?'':'none';
   document.getElementById('result-screen').style.display='';
+  returnStartID=setTimeout(backToQuizStart,6000);
   },400);
 }
 
@@ -763,10 +767,23 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---- タッチテンキー ---- */
+let lastTapInput=document.getElementById('ans-n');
+
+document.addEventListener('focusin',e=>{
+  const t=e.target;
+  if(t&&t.tagName==='INPUT'&&(t.classList.contains('ans-input')||t.classList.contains('yak-input')||t.classList.contains('num-input'))){
+    lastTapInput=t;
+  }
+});
+
 function getTapTarget(){
   const a=document.activeElement;
   if(a&&a.tagName==='INPUT'&&(a.classList.contains('ans-input')||a.classList.contains('yak-input')||a.classList.contains('num-input'))){
+    lastTapInput=a;
     return a;
+  }
+  if(lastTapInput&&lastTapInput.offsetParent!==null&&!lastTapInput.disabled){
+    return lastTapInput;
   }
   return document.getElementById('ans-n');
 }
