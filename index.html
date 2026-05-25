@@ -669,6 +669,8 @@ function submitAnswer(){
     document.getElementById('ans-n').className='ans-input wrong';
     document.getElementById('ans-d').className='ans-input wrong';
     document.getElementById('feedback').innerHTML=`<span class="fb-wrong">⚠️ まだ約分できるよ！ ${q.ansN}/${q.ansD} をいちばんかんたんな形にしよう。</span>`;
+    /* もう一度こたえる導線を残す（約分カードからでも再回答できる） */
+    document.getElementById('submit-btn').disabled=false;
     document.getElementById('yak-show-n').textContent=q.ansN;
     document.getElementById('yak-show-d').textContent=q.ansD;
     document.getElementById('yakubun-card').style.display='';
